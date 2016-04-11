@@ -1,0 +1,42 @@
+
+from pyspark.mllib.regression import LabeledPoint
+from pyspark.mllib.regression import LinearRegressionModel
+from pyspark.mllib.regression import LinearRegressionWithSGD
+from pyspark.mllib.linalg import Vectors
+from pyspark.mllib.feature import StandardScaler
+
+
+def parsePoint(line):
+    values = [float(x) for x in line.split(',')[0:7]]
+    return LabeledPoint(values[0], values[1:])
+
+input = sc.textFile("wasb:///autos.csv")
+
+featurevector  = input.map(lambda line : parsePoint(line)).persist()
+
+
+labels = featurevector.map(lambda x: x.label)
+features = featurevector.map(lambda x: x.features)
+scaler = StandardScaler().fit(features)
+scaledData = scaler.transform(features)
+newfeatures = labels.zip(scaledData)
+allset = newfeatures.map(lambda line: LabeledPoint(line[0], line[1]))
+
+
+training, test = allset.randomSplit(weights=[0.7, 0.3], seed=1)
+
+numIterations = 100
+stepSize = 0.001
+
+
+algorithm = LinearRegressionWithSGD.train(training, iterations=numIterations, step=stepSize, intercept=True)
+
+valuesAndPreds = test.map(lambda p: (p.label, algorithm.predict(p.features)))
+valuesAndPreds.take(20)
+
+
+MSE = valuesAndPreds.map(lambda (v, p): (v - p)**2).reduce(lambda x, y: x + y) / valuesAndPreds.count()
+print("Mean Squared Error = " + str(MSE))
+
+
+
