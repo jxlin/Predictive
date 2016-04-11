@@ -1,0 +1,3 @@
+Iris Setosa dataset can be downloaded from here:
+
+http://archive.ics.uci.edu/ml/datasets/Iris

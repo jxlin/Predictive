@@ -1,0 +1,37 @@
+
+import numpy as np
+from pyspark.sql.types import *
+from pyspark.ml.feature import Bucketizer
+splits = [-float("inf"), 8.0, 12.0, 15.0, float("inf")]
+temp = [(1, 10.2), (2, 17.1), (3, 9.6), (4, 5.0), (5, 3.4)]
+rainfall = sc.parallelize(temp)
+
+
+fields = [StructField("id", IntegerType(), True), StructField("rainfall", DoubleType(), True)]
+schema = StructType(fields)
+
+df = sqlContext.createDataFrame(rainfall, schema)
+
+
+bucketizer = Bucketizer(splits=splits, inputCol="rainfall", outputCol="discrainfall")
+
+bucketedData = bucketizer.transform(df)
+bucketedData.show()
+
+
+from pyspark.mllib.feature import Normalizer
+from pyspark.mllib.linalg import Vectors
+
+data = [[1, 34.0, 587.0],[5, 76.0, 1005.0], [3, 22.0, 867.0], [5, 19.0, 475.0], [2, 22.0, 666.0]]
+input = sc.parallelize(data)
+
+
+input.take(5)
+
+normalizer = Normalizer()
+normalized = normalizer.transform(input)
+
+
+normalized.take(5)
+
+

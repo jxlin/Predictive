@@ -1,0 +1,31 @@
+
+from numpy import *
+from pyspark.sql.types import *
+import matplotlib
+input = sc.textFile("wasb:///iris-multiclass.csv")
+input.count()
+
+
+input.first()
+
+splitter = input.map(lambda line: line.split(','))
+num = splitter.map(lambda line: (line[4], 1))
+
+
+num.take(3)
+
+schemaString = "SepalLength SepalWidth PetalLength PetalWidth Species"
+
+fields = [StructField(field_name, StringType(), True) for field_name in schemaString.split()]
+schema = StructType(fields)
+
+df = sqlContext.createDataFrame(splitter, schema)
+
+
+df.groupBy("Species").count().show()
+
+df.registerTempTable("iris")
+sqlContext.sql("SELECT Species, COUNT(Species) FROM iris GROUP BY Species").show()
+
+
+

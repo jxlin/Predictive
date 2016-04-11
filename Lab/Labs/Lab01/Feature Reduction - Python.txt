@@ -1,0 +1,18 @@
+
+from numpy import *
+from pyspark.mllib.linalg import Vectors
+from pyspark.mllib.feature import PCA
+input = sc.textFile("wasb:///iris-multiclass.csv")
+splitter = input.map(lambda line: line.split(','))
+vec = splitter.map(lambda line: Vectors.dense(float(line[0]), float(line[1]), float(line[2]), float(line[3])))
+
+
+vec.take(5)
+
+model = PCA(2).fit(vec)
+
+transformed = model.transform(vec)
+transformed.take(5)
+
+
+

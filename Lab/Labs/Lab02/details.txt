@@ -1,0 +1,3 @@
+The data can be downloaded from here in the correct format:
+
+https://archive.ics.uci.edu/ml/datasets/Auto+MPG

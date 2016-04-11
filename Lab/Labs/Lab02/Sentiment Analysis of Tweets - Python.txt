@@ -1,0 +1,53 @@
+
+from pyspark.ml import Pipeline
+from pyspark.ml.classification import LogisticRegression
+from pyspark.ml.evaluation import BinaryClassificationEvaluator
+from pyspark.ml.feature import HashingTF, Tokenizer
+from pyspark.ml.tuning import ParamGridBuilder, CrossValidator
+from pyspark.mllib.linalg import Vector
+from pyspark.sql import Row
+from pyspark.sql.types import *
+import numpy as np
+
+
+trainingrdd = sc.textFile("wasb:///training-tweets.csv").zipWithIndex().filter(lambda line: line[1] > 0).map(lambda line: line[0].split(","))
+testrdd = sc.textFile("wasb:///test-tweets.csv").zipWithIndex().filter(lambda line: line[1] > 0).map(lambda line: line[0].split(","))
+
+fields = [StructField("id", StringType(), True), StructField("label", StringType(), True), StructField("source", StringType(), True), StructField("text", StringType(), True)]
+schema = StructType(fields)
+
+training = sqlContext.createDataFrame(trainingrdd, schema)
+test = sqlContext.createDataFrame(testrdd, schema)
+
+
+training = training.withColumn("label", training.label.cast(DoubleType()))
+test = training.withColumn("label", training.label.cast(DoubleType()))
+tokenizer = Tokenizer(inputCol="text", outputCol="words")
+hashingTF = HashingTF(inputCol="words", outputCol="features")
+lr = LogisticRegression(maxIter=10)
+pipeline = Pipeline(stages=[tokenizer, hashingTF, lr])
+
+
+paramGrid = ParamGridBuilder()
+paramGrid.addGrid(hashingTF.numFeatures, [10, 20, 100])
+paramGrid.addGrid(lr.regParam, [0.1, 0.01])
+grid = paramGrid.build()
+
+
+bce = BinaryClassificationEvaluator()
+crossvalidator = CrossValidator(estimator=pipeline, estimatorParamMaps=grid,evaluator=BinaryClassificationEvaluator(),numFolds=6)
+
+
+model = crossvalidator.fit(training)
+
+prediction = model.transform(test)
+selected = prediction.select("id", "label", "text", "probability", "prediction")
+for row in selected.collect():
+    print(row)
+
+(float(selected.filter("label = prediction").count()) / float(selected.count())) * 100.0
+
+
+crossvalidator.getEvaluator().getMetricName()
+
+
